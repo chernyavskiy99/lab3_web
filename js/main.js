@@ -1,4 +1,5 @@
-const ENDPOINT = `https://web-lab2-bgubanov.herokuapp.com`;
+const ENDPOINT = `https://lab2-web-server.herokuapp.com`;
+
 
 const DEFAULT_COORDS = {
   latitude: 59.9344574,
@@ -268,16 +269,6 @@ function getFavoritesItem (container, data) {
 }
 
 function initFavoritesWeather (container) {
-  // if (isStorageEmpty()) {
-  //   container.lastElementChild.remove();
-
-  //   const errorElement = document.createElement(`b`);
-  //   errorElement.textContent = `Пока нет избранных городов.`;
-
-  //   container.appendChild(errorElement);
-
-  //   return;
-  // }
 
   getFavoritesData()
     .then((data) => {
