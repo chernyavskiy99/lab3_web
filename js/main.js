@@ -1,4 +1,4 @@
-const ENDPOINT = `https://lab2-web-server.herokuapp.com`;
+const ENDPOINT = `http://localhost:3000`;
 
 
 const DEFAULT_COORDS = {
