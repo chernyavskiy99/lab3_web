@@ -1,5 +1,4 @@
-const ENDPOINT = `http://localhost:3000`;
-
+const ENDPOINT = `https://web-lab2-bgubanov.herokuapp.com`;
 
 const DEFAULT_COORDS = {
   latitude: 59.9344574,
@@ -77,11 +76,7 @@ function getFavoritesData () {
 
 function getDataByName (cityName) {
   return sendRequest(`name`, cityName).then((res) => {
-      if (res.ok) {
-        return res.json();
-      }
-
-      throw new Error(`"${cityName}" уже в избранном.`);
+      return res.json();
     });
 }
 
@@ -89,20 +84,6 @@ function deleteCityByID (id) {
   return sendRequest(`del`, id).then((res) => {
     return res.json();
   });
-}
-
-function isStorageEmpty () {
-  if (!getCitiesFromStorage()) {
-    setCitiesInStorage([]);
-
-    return true;
-  }
-
-  if (!getCitiesFromStorage().length) {
-    return true;
-  }
-
-  return false;
 }
 
 function getDirection (deg) {
@@ -224,7 +205,7 @@ function initLocalWeather (container) {
 
   getDataByGeo()
     .then((data) => {
-      
+
       refreshButtonElement.classList.remove(`refresh__button--error`);
       refreshButtonElement.classList.remove(`refresh__button--loading`);
       refreshButtonElement.disabled = false;
@@ -234,9 +215,9 @@ function initLocalWeather (container) {
       const fragment = document.createDocumentFragment();
 
       const generalElement = document.querySelector(`#local-general`).content.cloneNode(true).querySelector(`.local-weather`);
-      
+
       const weatherData = getWeatherData(data);
-      
+
       generalElement.querySelector(`.local-weather__city`).textContent = `${weatherData.name}`;
       generalElement.querySelector(`.local-weather__icon`).src = `http://openweathermap.org/img/wn/${weatherData.icon}@2x.png`;
       generalElement.querySelector(`.local-weather__icon`).alt = `${weatherData.description}`;
@@ -246,11 +227,15 @@ function initLocalWeather (container) {
       fragment.querySelector(`.local-weather`).appendChild(getWeatherDetailsElement(weatherData));
 
       container.appendChild(fragment);
+      if (typeof callback !== "undefined")
+        executeCallback(callback);
     })
     .catch(() => {
       refreshButtonElement.classList.add(`refresh__button--error`);
       refreshButtonElement.classList.remove(`refresh__button--loading`);
       refreshButtonElement.disabled = false;
+      if (typeof callback !== "undefined")
+        executeCallback(callback);
     });
 };
 
@@ -268,7 +253,8 @@ function getFavoritesItem (container, data) {
   container.appendChild(favoriteItemElement);
 }
 
-function initFavoritesWeather (container) {
+function initFavoritesWeather () {
+  const container = document.querySelector(`.favorites__list`);
 
   getFavoritesData()
     .then((data) => {
@@ -293,12 +279,16 @@ function initFavoritesWeather (container) {
       });
       
       container.appendChild(fragment);
+      if (typeof callback !== "undefined")
+        executeCallback(callback);
     })
     .catch(() => {
       const errorElement = document.createElement(`b`);
       errorElement.textContent = `Что-то пошло не так(\nПопробуйте снова.`;
 
       container.appendChild(errorElement);
+      if (typeof callback !== "undefined")
+        executeCallback(callback);
     });
 };
 
@@ -310,6 +300,34 @@ function refreshButtonHandler () {
 
     initLocalWeather(document.querySelector(`.local`));
   });
+}
+
+function addFavouriteItem(cityInput) {
+  const addButtonElement = document.querySelector(`.favorites__add-button`);
+  const addInputElement = document.querySelector(`.favorites__input`);
+  const favoritesBoardElement = document.querySelector(`.favorites__list`);
+  getDataByName(cityInput)
+      .then((data) => {
+        addButtonElement.disabled = false;
+        addInputElement.disabled = false;
+        addInputElement.value = ``;
+
+        if (isFavoritesEmpty) {
+          favoritesBoardElement.innerHTML = ``;
+        }
+
+        isFavoritesEmpty = false;
+
+        if (data.message) {
+          alert(data.message);
+
+          return;
+        }
+
+        getFavoritesItem(favoritesBoardElement, getWeatherData(data));
+        if (typeof callback !== "undefined")
+          executeCallback(callback)
+      });
 }
 
 function formHandler () {
@@ -330,27 +348,7 @@ function formHandler () {
     addButtonElement.disabled = true;
     addInputElement.disabled = true;
 
-    getDataByName(addInputElement.value)
-      .then((data) => {
-        if (isFavoritesEmpty) {
-          favoritesBoardElement.innerHTML = ``;
-        }
-
-        isFavoritesEmpty = false;
-
-        getFavoritesItem(favoritesBoardElement, getWeatherData(data));
-
-        addButtonElement.disabled = false;
-        addInputElement.disabled = false;
-        addInputElement.value = ``;
-      })
-      .catch(() => {
-        alert(`Не удалось найти "${addInputElement.value}"`);
-
-        addButtonElement.disabled = false;
-        addInputElement.disabled = false;
-        addInputElement.value = ``;
-      });
+    addFavouriteItem(addInputElement.value)
   });
 }
 
@@ -391,6 +389,35 @@ function addHandlers () {
 const localWeatherContainerElement = document.querySelector(`.local`);
 const favoritesWeatherContainerElement = document.querySelector(`.favorites__list`);
 
-initLocalWeather(localWeatherContainerElement)
-initFavoritesWeather(favoritesWeatherContainerElement);
-addHandlers();
+function init() {
+  initLocalWeather(localWeatherContainerElement)
+  initFavoritesWeather();
+  addHandlers();
+}
+
+function executeCallback(callback) {
+  if (callback === null)
+    return
+  try {
+    callback();
+    callback = null;
+  } catch(err) {
+    console.log(err);
+    callback = null;
+  }
+}
+
+exports.getMainCity = function(callback_) {
+  callback = callback_
+  initLocalWeather(localWeatherContainerElement)
+}
+
+exports.addNewFavouriteCity = function(city, callback_) {
+  callback = callback_;
+  addFavouriteItem(city);
+}
+
+exports.getFavouriteCities = function(callback_) {
+  callback = callback_;
+  initFavoritesWeather();
+}
